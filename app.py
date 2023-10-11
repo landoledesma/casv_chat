@@ -1,17 +1,11 @@
+import streamlit as st 
+from streamlit_chat import message
 from langchain.prompts import PromptTemplate
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
-import os
-import openai
-from dotenv import load_dotenv
+from conversation import load_data, process_data, conversational_chat
 
-# Cargando variables de entorno
-load_dotenv("token.env")
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-openai.api_key = os.getenv("OPENAI_API_KEY")
-DB_FAISS_PATH = "vectorstore/db_faiss"
 
 # Definiendo la plantilla para el bot
 template_bot = """
@@ -30,12 +24,7 @@ def custom_prompt():
     prompt = PromptTemplate(template=template_bot, input_variables=["context", "question"])
     return prompt
 
-def load_llm():
-    llm  = ChatOpenAI(
-        max_tokens=1000,
-        temperature=0.5
-        )
-    return llm
+
 
 def retrival_qa_chain(llm, prompt, db):
     qa_chain = RetrievalQA.from_chain_type(
@@ -47,10 +36,42 @@ def retrival_qa_chain(llm, prompt, db):
     )
     return qa_chain
 
-def qa_bot():
-    embeddings = OpenAIEmbeddings()
-    db = FAISS.load_local(DB_FAISS_PATH, embeddings)
-    llm = load_llm()
-    qa_prompt = custom_prompt()
-    qa = retrival_qa_chain(llm, qa_prompt, db)
-    return qa
+
+st.title("Chat con CSV ")
+
+
+uploaded_file = st.sidebar.file_uploader("Upload your CSV", type="csv")
+
+if uploaded_file:
+    data = load_data(uploaded_file)
+    chain = process_data(data)
+    
+    if 'history' not in st.session_state:
+        st.session_state['history'] = []
+
+    if 'generated' not in st.session_state:
+        st.session_state['generated'] = ["Hola ! Preguntame " + uploaded_file.name + " 🤗"]
+
+    if 'past' not in st.session_state:
+        st.session_state['past'] = ["Hey ! 👋"]
+        
+    response_container = st.container()
+    container = st.container()
+
+    with container:
+        with st.form(key='my_form', clear_on_submit=True):
+            user_input = st.text_input("Query:", placeholder="Habla con tu csv aqui (:", key='input')
+            submit_button = st.form_submit_button(label='Send')
+            
+        if submit_button and user_input:
+            output = conversational_chat(chain, user_input, st.session_state['history'])
+            
+            st.session_state['past'].append(user_input)
+            st.session_state['generated'].append(output)
+
+    if st.session_state['generated']:
+        with response_container:
+            for i in range(len(st.session_state['generated'])):
+                message(st.session_state["past"][i], is_user=True, key=str(i) + '_user', avatar_style="big-smile")
+                message(st.session_state["generated"][i], key=str(i), avatar_style="thumbs")
+
