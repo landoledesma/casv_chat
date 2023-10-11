@@ -1,7 +1,6 @@
 import streamlit as st 
 from streamlit_chat import message
 from langchain.prompts import PromptTemplate
-from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from conversation import load_data, process_data, conversational_chat
