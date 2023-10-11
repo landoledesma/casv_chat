@@ -1,45 +1,9 @@
 import streamlit as st 
 from streamlit_chat import message
-from langchain.prompts import PromptTemplate
-from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
 from conversation import load_data, process_data, conversational_chat
 
-
-# Definiendo la plantilla para el bot
-template_bot = """
-            usa la siguiente pieza de información para responder la pregunta de usuario
-            si no sabes la respuesta solo di : no tengo ese conocimiento,
-            no trates de responderla
-            Context:{context}
-            Question:{question}
-            solo regresa la información relevante y nada más
-"""
-
-def custom_prompt():
-    """
-        Prompt template for QA retrival for each vector store
-    """
-    prompt = PromptTemplate(template=template_bot, input_variables=["context", "question"])
-    return prompt
-
-
-
-def retrival_qa_chain(llm, prompt, db):
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=db.as_retriever(search_kwargs={'k':2}),
-        return_source_documents=True,
-        chain_type_kwargs={'prompt':prompt}
-    )
-    return qa_chain
-
-
 st.title("Chat con CSV ")
-
-
-uploaded_file = st.sidebar.file_uploader("Upload your CSV", type="csv")
+uploaded_file = st.sidebar.file_uploader("Carga tu CSV", type="csv")
 
 if uploaded_file:
     data = load_data(uploaded_file)
