@@ -33,7 +33,8 @@ def conversational_chat(chain,query,history):
     result = chain({"question":query,"chat_history":history})
     return result["answer"]
 
-def process_data(data,llm):
+def process_data(data):
+    llm = load_llm()
     embeddings = OpenAIEmbeddings()
     db = FAISS.from_documents(data, embeddings)
     db.save_local(DB_FAISS_PATH)
